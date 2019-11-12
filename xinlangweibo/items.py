@@ -48,4 +48,4 @@ class CommentItem(scrapy.Item):
     reply_follow_count = scrapy.Field()  # 评论人关注人数
     reply_followers_count = scrapy.Field()  # 评论人被关注人数
     reply_verified_reason = scrapy.Field()  # 认证信息
-
+    spider_time = scrapy.Field()

@@ -3,7 +3,7 @@ import scrapy
 import re
 import json
 import datetime
-
+import time
 from xinlangweibo.items import XinlangweiboItem, CommentItem
 
 
@@ -11,6 +11,11 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
     name = 'xinlangweibo_spider'
 
     search_name = '海清'
+
+    # 清洗text的正则
+    pattern1 = re.compile('<.+?alt=(\[.*?\]).+?>')
+    pattern2 = re.compile('<.+?>')
+
 
     def start_requests(self):
         url = f'https://s.weibo.com/user?q={self.search_name}&Refer=weibo_user'
@@ -45,7 +50,7 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
     def detail(self, response):
         uid = response.meta['uid']
         page = response.meta['page']
-        spider_time = datetime.datetime.now().strftime('%Y-%M-%D %H:%m:%S')
+
         json_data = json.loads(response.text)
         data = json_data['data']
         ok = json_data['ok']
@@ -69,8 +74,8 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
                     raw_text = card['mblog']['text']  # 博文内容
                 else:
                     raw_text = ''
-                raw_text = re.sub('<.+?alt=(\[.*?\]).+?>', r'\1', raw_text)  # 先提取表情
-                raw_text = re.sub('<.+?>', '', raw_text)  # 去除标签信息
+                raw_text = self.pattern1.sub(r'\1', raw_text)  # 先提取表情
+                raw_text = self.pattern2.sub('', raw_text)  # 去除标签信息
                 user = card['mblog']['user']
                 avatar_hd = user['avatar_hd']  # 头像图片链接
                 follow_count = user['follow_count']  # 他的关注数
@@ -92,7 +97,7 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
                 item['attitudes_count'] = attitudes_count
                 item['comments_count'] = comments_count
                 item['reposts_count'] = reposts_count
-                item['spider_time'] = spider_time
+                item['spider_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 yield item
 
                 # 获取博文的回复信息
@@ -133,7 +138,13 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
         max_id = data['max_id']
         for comm in data['data']:
             text = comm['text']  # 评论内容
+            text = self.pattern1.sub(r'\1', text)  # 先提取表情
+            text = self.pattern2.sub('', text)  # 去除标签信息
+
             created_at = comm['created_at']  # 评论时间
+            time_array = time.strptime(created_at, '%a %b %d %H:%M:%S +0800 %Y')
+            created_at = time.strftime('%Y-%m-%d %H:%M:%S', time_array)
+
             like_count = comm['like_count']  # 评论被点赞数
             reply_count = comm['total_number']  # 评论被回复数
 
@@ -142,7 +153,7 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
             avatar_hd = comm['user']['avatar_hd']  # 评论人头像
             follow_count = comm['user']['follow_count']  # 评论人关注人数
             followers_count = comm['user']['followers_count']  # 评论人被关注人数
-            verified_reason = comm['user']['verified_reason']  # 认证信息
+            verified_reason = comm['user']['verified_reason'] if 'verified_reason' in comm['user'] else ''  # 认证信息
 
             item = CommentItem()
             item['mid'] = mid
@@ -167,17 +178,29 @@ class XinlangweiboSpiderSpider(scrapy.Spider):
                 item['reply_follow_count'] = ''
                 item['reply_followers_count'] = ''
                 item['reply_verified_reason'] = ''
+                item['spider_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
                 yield item
+                continue
 
             for reply in comments:
-                item['reply_text'] = reply['text']
-                item['reply_created_at'] = reply['created_at']
+                reply_text = reply['text']
+                reply_text = self.pattern1.sub(r'\1', reply_text)  # 先提取表情
+                reply_text = self.pattern2.sub('', reply_text)  # 去除标签信息
+                item['reply_text'] = reply_text
+
+                reply_created_at = reply['created_at']
+                time_array = time.strptime(reply_created_at, '%a %b %d %H:%M:%S +0800 %Y')
+                reply_created_at = time.strftime('%Y-%m-%d %H:%M:%S', time_array)
+                item['reply_created_at'] = reply_created_at
                 item['reply_uid'] = reply['id']
                 item['reply_screen_name'] = reply['user']['screen_name']
                 item['reply_avatar_hd'] = reply['user']['avatar_hd']
                 item['reply_follow_count'] = reply['user']['follow_count']
                 item['reply_followers_count'] = reply['user']['followers_count']
-                item['reply_verified_reason'] = reply['user']['verified_reason']
+                reply_verified_reason = reply['user']['verified_reason'] if 'verified_reason' in reply['user'] else ''
+                item['reply_verified_reason'] = reply_verified_reason
+                item['spider_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 yield item
 
         # 评论翻页
