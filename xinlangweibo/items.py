@@ -49,3 +49,12 @@ class CommentItem(scrapy.Item):
     reply_followers_count = scrapy.Field()  # 评论人被关注人数
     reply_verified_reason = scrapy.Field()  # 认证信息
     spider_time = scrapy.Field()
+
+
+class WeiBoFans(scrapy.Item):
+    date = scrapy.Field()
+    name = scrapy.Field()
+    fans = scrapy.Field()
+    uid = scrapy.Field()
+    nick_name_url = scrapy.Field()
+    uid_url = scrapy.Field()

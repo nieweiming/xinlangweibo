@@ -8,49 +8,41 @@ from xinlangweibo.items import XinlangweiboItem, CommentItem
 
 
 class XinlangweiboSpiderSpider(scrapy.Spider):
-    name = 'xinlangweibo_spider'
-
-    search_name = '海清'
+    name = 'weibo_fans'
 
     custom_settings = {
-        'ITEM_PIPELINES': {
-            'xinlangweibo.pipelines.XinlangweiboPipeline': 300,
-        }
+        'COOKIES_DEBUG': True,
+
     }
 
-    # 清洗text的正则
-    pattern1 = re.compile('<.+?alt=(\[.*?\]).+?>')
-    pattern2 = re.compile('<.+?>')
-
     def start_requests(self):
-        url = f'https://s.weibo.com/user?q={self.search_name}&Refer=weibo_user'
+        start_urls = ['https://weibo.cn/1669879400/follow',  # 迪丽热巴
+                      'https://weibo.cn/1195230310/follow',  # 何炅
+                      'https://weibo.cn/1192329374/follow',  # 谢娜
+                      'https://weibo.cn/1784537661/follow',  # 罗志祥
+                      'https://weibo.cn/1226049067/follow',  # 汪涵
+                      'https://weibo.cn/2529348553/follow',  # 吴忠宪
+                      'https://weibo.cn/1282005885/follow',  # 蔡康永
+                      'https://weibo.cn/1704116960/follow',  # 小S
+                      'https://weibo.cn/1574684061/follow',  # 陈赫
+                      'https://weibo.cn/5231788809/follow',  # 向太Tiffany陳嵐
+                      ]
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "Host": "s.weibo.com",
-            "Referer": "https://weibo.com/",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Cookie": "_T_WM=40181614215; ALF=1576821565; SCF=AqcEI0VVhqToWmqeDhDgSip-zOPlUFc-INGvFPGBmyuXo5JYWCOwhUbo4QUSVKAsxWg3yf3MXkVOcSJAKxLhX64.; SUB=_2A25w0KbMDeRhGeFP6VMU9SfOyz6IHXVQOsqErDV6PUJbktAKLRf-kW1NQSSdyH3OevpFjiOeh7fs3ohsASOv0lyu; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WWN5asc55wSc8jJ4fI68m0B5JpX5K-hUgL.FoMpeo2fSK.Eehz2dJLoIp7LxKML1KBLBKnLxKqL1hnLBoMNeKe0S050e0n0; SUHB=0HTRqv-KeednHt; SSOLoginState=1574229660; MLOGIN=1; M_WEIBOCN_PARAMS=luicode%3D10000011%26lfid%3D1076031574684061",
             "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
+            "Sec-Fetch-Site": "none",
             "Sec-Fetch-User": "?1",
             "Upgrade-Insecure-Requests": "1",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.87 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36",
         }
-        yield scrapy.Request(url, headers=headers)
+        for url in start_urls:
+            yield scrapy.Request(url, headers=headers, callback=self.parse)
 
     def parse(self, response):
-        href = response.xpath('//*[@id="pl_user_feedList"]/div[1]/div[1]/a/@href').get()
-        uid = re.search('(\d+)', href).group()
-        page = 1
-        url = f'https://m.weibo.cn/api/container/getIndex?is_search[]=0&is_search[]=0&visible[]=0&visible[]=0&is_all[]=1&is_all[]=1&is_tag[]=0&is_tag[]=0&profile_ftype[]=1&profile_ftype[]=1&sudaref[]=passport.weibo.com&sudaref[]=passport.weibo.com&sudaref[]=passport.weibo.com&sudaref[]=passport.weibo.com&reason[]=&reason[]=&retcode[]=&retcode[]=&jumpfrom=weibocom&type=uid&value={uid}&containerid=1076031662055430'
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "MWeibo-Pwa": "1",
-            "Referer": "https://m.weibo.cn/u/1662055430?is_search=0&is_search=0&visible=0&visible=0&is_all=1&is_all=1&is_tag=0&is_tag=0&profile_ftype=1&profile_ftype=1&page=1&page=1&sudaref=passport.weibo.com&sudaref=passport.weibo.com&sudaref=passport.weibo.com&sudaref=passport.weibo.com&reason=&reason=&retcode=&retcode=&jumpfrom=weibocom",
-            "User-Agent": "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.87 Mobile Safari/537.36",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-XSRF-TOKEN": "6c74a9",
-        }
-        yield scrapy.Request(url, headers=headers, callback=self.detail, meta={'uid': uid, 'page': page})
+        print(response.text)
+        pass
 
     def detail(self, response):
         uid = response.meta['uid']
